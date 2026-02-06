@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Sale Order Form: Add custom fields                           -->
+    <!-- ============================================================ -->
+    <record id="sale_order_view_form_inherit_custom" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.custom</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add source channel and priority in header area -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="source_channel"/>
+                <field name="priority" widget="priority"/>
+            </xpath>
+
+            <!-- Link to CRM opportunity -->
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="opportunity_id"/>
+            </xpath>
+
+            <!-- Add margin and expiry indicators -->
+            <xpath expr="//field[@name='amount_total']" position="after">
+                <field name="margin_percent"
+                    widget="percentage"
+                    decoration-danger="margin_percent &lt; 10"
+                    decoration-warning="margin_percent &lt; 25"
+                    decoration-success="margin_percent &gt;= 25"/>
+            </xpath>
+
+            <!-- Internal notes tab -->
+            <xpath expr="//page[last()]" position="after">
+                <page string="Internal Notes" name="internal_notes">
+                    <field name="internal_notes"
+                        placeholder="Notes for the sales team (not visible to client)..."/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Sale Order List: Add custom columns                          -->
+    <!-- ============================================================ -->
+    <record id="sale_order_view_tree_inherit_custom" model="ir.ui.view">
+        <field name="name">sale.order.tree.inherit.custom</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_quotation_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="source_channel" optional="hide"/>
+                <field name="margin_percent" optional="hide"
+                    decoration-danger="margin_percent &lt; 10"
+                    decoration-success="margin_percent &gt;= 25"/>
+                <field name="is_expiring_soon" widget="boolean" optional="show"
+                    decoration-danger="is_expiring_soon"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Sale Order Search: Add custom filters                        -->
+    <!-- ============================================================ -->
+    <record id="sale_order_view_search_inherit_custom" model="ir.ui.view">
+        <field name="name">sale.order.search.inherit.custom</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.sale_order_view_search_inherit_quotation"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="opportunity_id"/>
+                <filter name="filter_expiring" string="Expiring Soon"
+                    domain="[('is_expiring_soon', '=', True)]"/>
+                <filter name="filter_ai_created" string="AI Created"
+                    domain="[('source_channel', '=', 'ai_mcp')]"/>
+                <filter name="filter_high_margin" string="High Margin (&gt;25%)"
+                    domain="[('margin_percent', '&gt;=', 25)]"/>
+                <separator/>
+                <group string="Group By">
+                    <filter name="groupby_source" string="Source Channel"
+                        context="{'group_by': 'source_channel'}"/>
+                    <filter name="groupby_opportunity" string="Opportunity"
+                        context="{'group_by': 'opportunity_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

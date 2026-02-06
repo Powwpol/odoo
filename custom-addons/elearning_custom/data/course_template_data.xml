@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Onboarding Template -->
+        <record id="template_onboarding" model="elearning.course.template">
+            <field name="name">Employee Onboarding</field>
+            <field name="sequence">10</field>
+            <field name="channel_type">training</field>
+            <field name="difficulty">beginner</field>
+            <field name="target_audience">New employees</field>
+            <field name="estimated_duration">4.0</field>
+            <field name="learning_objectives"><![CDATA[
+                <ul>
+                    <li>Understand company culture and values</li>
+                    <li>Know the organizational structure</li>
+                    <li>Master essential tools and processes</li>
+                    <li>Complete compliance training</li>
+                </ul>
+            ]]></field>
+        </record>
+
+        <record id="template_onboarding_sec1" model="elearning.course.template.section">
+            <field name="template_id" ref="template_onboarding"/>
+            <field name="name">Welcome &amp; Company Overview</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="template_onboarding_s1_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_onboarding_sec1"/>
+            <field name="name">Welcome Message</field>
+            <field name="slide_category">article</field>
+            <field name="is_preview">True</field>
+            <field name="completion_time">0.25</field>
+        </record>
+        <record id="template_onboarding_s1_slide2" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_onboarding_sec1"/>
+            <field name="name">Our Mission &amp; Values</field>
+            <field name="slide_category">article</field>
+            <field name="completion_time">0.5</field>
+        </record>
+
+        <record id="template_onboarding_sec2" model="elearning.course.template.section">
+            <field name="template_id" ref="template_onboarding"/>
+            <field name="name">Tools &amp; Processes</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="template_onboarding_s2_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_onboarding_sec2"/>
+            <field name="name">IT Setup Guide</field>
+            <field name="slide_category">document</field>
+            <field name="completion_time">0.5</field>
+        </record>
+        <record id="template_onboarding_s2_slide2" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_onboarding_sec2"/>
+            <field name="name">Essential Tools Demo</field>
+            <field name="slide_category">video</field>
+            <field name="completion_time">1.0</field>
+        </record>
+
+        <record id="template_onboarding_sec3" model="elearning.course.template.section">
+            <field name="template_id" ref="template_onboarding"/>
+            <field name="name">Assessment</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="template_onboarding_s3_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_onboarding_sec3"/>
+            <field name="name">Onboarding Quiz</field>
+            <field name="slide_category">quiz</field>
+            <field name="completion_time">0.25</field>
+        </record>
+
+        <!-- Product Training Template -->
+        <record id="template_product_training" model="elearning.course.template">
+            <field name="name">Product Training</field>
+            <field name="sequence">20</field>
+            <field name="channel_type">training</field>
+            <field name="difficulty">intermediate</field>
+            <field name="target_audience">Sales team, Support team</field>
+            <field name="estimated_duration">6.0</field>
+            <field name="learning_objectives"><![CDATA[
+                <ul>
+                    <li>Master product features and benefits</li>
+                    <li>Handle common customer questions</li>
+                    <li>Demonstrate the product effectively</li>
+                    <li>Understand pricing and licensing</li>
+                </ul>
+            ]]></field>
+        </record>
+
+        <record id="template_product_sec1" model="elearning.course.template.section">
+            <field name="template_id" ref="template_product_training"/>
+            <field name="name">Product Overview</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="template_product_s1_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_product_sec1"/>
+            <field name="name">Product Introduction</field>
+            <field name="slide_category">video</field>
+            <field name="is_preview">True</field>
+            <field name="completion_time">0.5</field>
+        </record>
+        <record id="template_product_s1_slide2" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_product_sec1"/>
+            <field name="name">Key Features Walkthrough</field>
+            <field name="slide_category">article</field>
+            <field name="completion_time">1.0</field>
+        </record>
+
+        <record id="template_product_sec2" model="elearning.course.template.section">
+            <field name="template_id" ref="template_product_training"/>
+            <field name="name">Deep Dive</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="template_product_s2_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_product_sec2"/>
+            <field name="name">Technical Architecture</field>
+            <field name="slide_category">document</field>
+            <field name="completion_time">1.5</field>
+        </record>
+        <record id="template_product_s2_slide2" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_product_sec2"/>
+            <field name="name">Live Demo Recording</field>
+            <field name="slide_category">video</field>
+            <field name="completion_time">1.0</field>
+        </record>
+
+        <record id="template_product_sec3" model="elearning.course.template.section">
+            <field name="template_id" ref="template_product_training"/>
+            <field name="name">Certification</field>
+            <field name="sequence">30</field>
+        </record>
+        <record id="template_product_s3_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_product_sec3"/>
+            <field name="name">Product Certification Exam</field>
+            <field name="slide_category">quiz</field>
+            <field name="completion_time">0.5</field>
+        </record>
+
+        <!-- Compliance Training Template -->
+        <record id="template_compliance" model="elearning.course.template">
+            <field name="name">Compliance Training</field>
+            <field name="sequence">30</field>
+            <field name="channel_type">training</field>
+            <field name="difficulty">beginner</field>
+            <field name="target_audience">All employees</field>
+            <field name="estimated_duration">2.0</field>
+        </record>
+
+        <record id="template_compliance_sec1" model="elearning.course.template.section">
+            <field name="template_id" ref="template_compliance"/>
+            <field name="name">Policies &amp; Regulations</field>
+            <field name="sequence">10</field>
+        </record>
+        <record id="template_compliance_s1_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_compliance_sec1"/>
+            <field name="name">Company Policies Overview</field>
+            <field name="slide_category">article</field>
+            <field name="completion_time">0.5</field>
+        </record>
+        <record id="template_compliance_s1_slide2" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_compliance_sec1"/>
+            <field name="name">Data Protection &amp; GDPR</field>
+            <field name="slide_category">article</field>
+            <field name="completion_time">0.5</field>
+        </record>
+
+        <record id="template_compliance_sec2" model="elearning.course.template.section">
+            <field name="template_id" ref="template_compliance"/>
+            <field name="name">Assessment</field>
+            <field name="sequence">20</field>
+        </record>
+        <record id="template_compliance_s2_slide1" model="elearning.course.template.slide">
+            <field name="section_id" ref="template_compliance_sec2"/>
+            <field name="name">Compliance Quiz</field>
+            <field name="slide_category">quiz</field>
+            <field name="completion_time">0.25</field>
+        </record>
+    </data>
+</odoo>

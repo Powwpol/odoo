@@ -8,12 +8,16 @@ odoo/
 ├── odoo/                      # Odoo framework (DO NOT MODIFY)
 ├── custom-addons/             # Custom modules (YOUR CODE GOES HERE)
 │   ├── odoo_mcp_server/       # MCP Server for AI-assisted operations
-│   └── hr_expense_custom/     # Expense report customization
+│   ├── hr_expense_custom/     # Expense report customization
+│   ├── sale_custom/           # Sales quotation customization
+│   └── elearning_custom/      # E-Learning course customization
 ├── .claude/
 │   └── skills/                # Claude Code skills for Odoo
 │       ├── odoo-module.md     # /odoo-module - Create new modules
 │       ├── odoo-extend-model.md # /odoo-extend-model - Extend models
 │       ├── odoo-expense.md    # /odoo-expense - Expense operations
+│       ├── odoo-sale.md       # /odoo-sale - Sales & quotations
+│       ├── odoo-elearning.md  # /odoo-elearning - E-Learning courses
 │       └── odoo-mcp.md        # /odoo-mcp - MCP server operations
 └── CLAUDE.md                  # This file
 ```
@@ -42,6 +46,9 @@ The MCP server (`custom-addons/odoo_mcp_server/`) exposes Odoo through a REST-li
 - **Discovery**: `/mcp/models`, `/mcp/schema/<model>`, `/mcp/views/<model>`
 - **CRUD**: `/mcp/search`, `/mcp/read`, `/mcp/create`, `/mcp/write`, `/mcp/delete`
 - **Actions**: `/mcp/action` (execute any public model method)
+- **CRM/BI**: `/mcp/crm/pipeline`, `/mcp/crm/conversion`, `/mcp/crm/revenue`, `/mcp/crm/team-performance`
+- **Sales**: `/mcp/sale/create-quote`, `/mcp/sale/confirm`, `/mcp/sale/summary`, `/mcp/sale/templates`
+- **E-Learning**: `/mcp/elearning/create-course`, `/mcp/elearning/build-course`, `/mcp/elearning/create-quiz`
 - **Expenses**: `/mcp/expense/summary`, `/mcp/expense/submit`, `/mcp/expense/approve`
 
 All endpoints use Bearer token auth (Odoo API keys).
@@ -56,6 +63,21 @@ Extends Odoo's expense management:
 - **Multi-level Approval**: Second approver support
 - **Batch Approval**: Wizard for bulk expense approval
 
+### sale_custom
+Extends Odoo's sales management:
+- **Source Tracking**: Channel tracking (direct, AI/MCP, referral, etc.)
+- **Priority & Margins**: Urgency levels, computed margin percentage
+- **CRM Integration**: Direct link to opportunities
+- **Expiry Alerts**: Auto-detection of expiring quotations
+- **Quick Create**: `quick_create_quotation()` for MCP/AI integration
+
+### elearning_custom
+Extends Odoo's e-learning:
+- **Course Templates**: Predefined structures (Onboarding, Product, Compliance)
+- **Course Metadata**: Difficulty, audience, learning objectives, certificates
+- **Quick Build**: `quick_build_course()` for MCP/AI course generation
+- **Template System**: `elearning.course.template` model with sections and slides
+
 ### Adding New Customizations
 1. Create/extend models in `custom-addons/<module>/models/`
 2. Add views via xpath in `custom-addons/<module>/views/`
@@ -68,6 +90,6 @@ Extends Odoo's expense management:
 # Run specific module tests
 ./odoo-bin --test-enable -u hr_expense_custom --addons-path=addons,custom-addons --stop-after-init
 
-# Run with test tags
-./odoo-bin --test-tags /hr_expense_custom --addons-path=addons,custom-addons --stop-after-init
+# Install all custom modules
+./odoo-bin -u odoo_mcp_server,hr_expense_custom,sale_custom,elearning_custom --addons-path=addons,custom-addons
 ```

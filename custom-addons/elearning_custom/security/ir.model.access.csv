@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_course_template_user,elearning.course.template.user,model_elearning_course_template,base.group_user,1,0,0,0
+access_course_template_manager,elearning.course.template.manager,model_elearning_course_template,website_slides.group_website_slides_manager,1,1,1,1
+access_course_template_section_user,elearning.course.template.section.user,model_elearning_course_template_section,base.group_user,1,0,0,0
+access_course_template_section_manager,elearning.course.template.section.manager,model_elearning_course_template_section,website_slides.group_website_slides_manager,1,1,1,1
+access_course_template_slide_user,elearning.course.template.slide.user,model_elearning_course_template_slide,base.group_user,1,0,0,0
+access_course_template_slide_manager,elearning.course.template.slide.manager,model_elearning_course_template_slide,website_slides.group_website_slides_manager,1,1,1,1
