@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Expense Form: Add custom fields                              -->
+    <!-- ============================================================ -->
+    <record id="hr_expense_view_form_inherit_custom" model="ir.ui.view">
+        <field name="name">hr.expense.form.inherit.custom</field>
+        <field name="model">hr.expense</field>
+        <field name="inherit_id" ref="hr_expense.hr_expense_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add expense category before product -->
+            <xpath expr="//field[@name='product_id']" position="before">
+                <field name="expense_category_id" options="{'no_create': True}"/>
+            </xpath>
+
+            <!-- Add project & task fields after analytic distribution -->
+            <xpath expr="//field[@name='analytic_distribution']" position="after">
+                <field name="project_id"/>
+                <field name="task_id"
+                    invisible="not project_id"/>
+                <field name="is_billable"/>
+            </xpath>
+
+            <!-- Add client name and location after description -->
+            <xpath expr="//field[@name='description']" position="before">
+                <field name="client_name"
+                    placeholder="Client or contact name"/>
+                <field name="location"
+                    placeholder="City, venue, etc."/>
+            </xpath>
+
+            <!-- Policy warning banner -->
+            <xpath expr="//sheet" position="inside">
+                <div class="alert alert-warning" role="alert"
+                    invisible="not policy_warning">
+                    <strong>Policy Warning:</strong>
+                    <field name="policy_warning" nolabel="1"/>
+                    <field name="exceeds_limit" invisible="1"/>
+                </div>
+            </xpath>
+
+            <!-- Second approval button and info -->
+            <xpath expr="//button[@name='action_approve']" position="after">
+                <button name="action_second_approve"
+                    string="Second Approval"
+                    type="object"
+                    class="btn-primary"
+                    invisible="not second_approval_required or second_approval_state != 'pending' or approval_state != 'approved'"
+                    groups="hr_expense.group_hr_expense_team_approver"/>
+                <button name="action_second_refuse"
+                    string="Refuse (2nd Level)"
+                    type="object"
+                    class="btn-secondary"
+                    invisible="not second_approval_required or second_approval_state != 'pending' or approval_state != 'approved'"
+                    groups="hr_expense.group_hr_expense_team_approver"/>
+            </xpath>
+
+            <!-- Second approval status fields -->
+            <xpath expr="//field[@name='manager_id']" position="after">
+                <field name="second_approval_required" invisible="1"/>
+                <field name="second_approver_id"
+                    invisible="not second_approval_required"
+                    readonly="1"/>
+                <field name="second_approval_state"
+                    invisible="not second_approval_required"
+                    readonly="1"
+                    widget="badge"
+                    decoration-info="second_approval_state == 'pending'"
+                    decoration-success="second_approval_state == 'approved'"
+                    decoration-danger="second_approval_state == 'refused'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Expense List: Add custom columns                             -->
+    <!-- ============================================================ -->
+    <record id="hr_expense_view_tree_inherit_custom" model="ir.ui.view">
+        <field name="name">hr.expense.tree.inherit.custom</field>
+        <field name="model">hr.expense</field>
+        <field name="inherit_id" ref="hr_expense.view_expenses_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_id']" position="after">
+                <field name="expense_category_id" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='state']" position="before">
+                <field name="project_id" optional="hide"/>
+                <field name="exceeds_limit" widget="boolean" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Expense Search: Add custom filters                           -->
+    <!-- ============================================================ -->
+    <record id="hr_expense_view_search_inherit_custom" model="ir.ui.view">
+        <field name="name">hr.expense.search.inherit.custom</field>
+        <field name="model">hr.expense</field>
+        <field name="inherit_id" ref="hr_expense.hr_expense_view_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="expense_category_id"/>
+                <field name="project_id"/>
+                <field name="client_name"/>
+                <filter name="filter_billable" string="Billable" domain="[('is_billable', '=', True)]"/>
+                <filter name="filter_exceeds_limit" string="Exceeds Limit" domain="[('exceeds_limit', '=', True)]"/>
+                <filter name="filter_second_approval_pending" string="Pending 2nd Approval"
+                    domain="[('second_approval_state', '=', 'pending')]"/>
+                <separator/>
+                <group string="Group By">
+                    <filter name="groupby_category" string="Category"
+                        context="{'group_by': 'expense_category_id'}"/>
+                    <filter name="groupby_project" string="Project"
+                        context="{'group_by': 'project_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- Expense Category Views                                       -->
+    <!-- ============================================================ -->
+    <record id="expense_category_view_tree" model="ir.ui.view">
+        <field name="name">hr.expense.category.tree</field>
+        <field name="model">hr.expense.category</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="code"/>
+                <field name="name"/>
+                <field name="max_amount"/>
+                <field name="max_monthly_amount"/>
+                <field name="requires_receipt"/>
+                <field name="auto_approve_below"/>
+                <field name="requires_second_approval"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="expense_category_view_form" model="ir.ui.view">
+        <field name="name">hr.expense.category.form</field>
+        <field name="model">hr.expense.category</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Category Name"/></h1>
+                    </div>
+                    <group>
+                        <group string="General">
+                            <field name="code"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="color" widget="color_picker"/>
+                        </group>
+                        <group string="Limits">
+                            <field name="max_amount"/>
+                            <field name="max_monthly_amount"/>
+                            <field name="auto_approve_below"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Requirements">
+                            <field name="requires_receipt"/>
+                            <field name="min_receipt_amount"
+                                invisible="not requires_receipt"/>
+                            <field name="requires_description"/>
+                        </group>
+                        <group string="Approval">
+                            <field name="requires_second_approval"/>
+                            <field name="second_approver_id"
+                                invisible="not requires_second_approval"/>
+                        </group>
+                    </group>
+                    <group string="Accounting">
+                        <field name="default_account_id"/>
+                        <field name="default_tax_ids" widget="many2many_tags"/>
+                        <field name="product_ids" widget="many2many_tags"/>
+                    </group>
+                    <group string="Description">
+                        <field name="description" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Expense Category Menu Action -->
+    <record id="expense_category_action" model="ir.actions.act_window">
+        <field name="name">Expense Categories</field>
+        <field name="res_model">hr.expense.category</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_expense_category"
+        name="Categories"
+        parent="hr_expense.menu_hr_expense_configuration"
+        action="expense_category_action"
+        sequence="10"/>
+</odoo>

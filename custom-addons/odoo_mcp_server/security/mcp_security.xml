@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- MCP API User Group -->
+        <record id="group_mcp_user" model="res.groups">
+            <field name="name">MCP API User</field>
+            <field name="comment">Users that can access MCP API endpoints</field>
+            <field name="category_id" ref="base.module_category_technical_settings"/>
+        </record>
+
+        <!-- MCP Admin Group (full access to tool registry) -->
+        <record id="group_mcp_admin" model="res.groups">
+            <field name="name">MCP Administrator</field>
+            <field name="comment">Can manage MCP tool registry and configuration</field>
+            <field name="category_id" ref="base.module_category_technical_settings"/>
+            <field name="implied_ids" eval="[(4, ref('group_mcp_user'))]"/>
+        </record>
+
+        <!-- Record rule: MCP users can read tool registry -->
+        <record id="mcp_tool_registry_user_rule" model="ir.rule">
+            <field name="name">MCP Tool Registry: User Read</field>
+            <field name="model_id" ref="model_mcp_tool_registry"/>
+            <field name="groups" eval="[(4, ref('group_mcp_user'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="True"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_unlink" eval="False"/>
+        </record>
+
+        <!-- Record rule: MCP admins have full access -->
+        <record id="mcp_tool_registry_admin_rule" model="ir.rule">
+            <field name="name">MCP Tool Registry: Admin Full Access</field>
+            <field name="model_id" ref="model_mcp_tool_registry"/>
+            <field name="groups" eval="[(4, ref('group_mcp_admin'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+        </record>
+    </data>
+</odoo>

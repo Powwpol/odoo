@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mcp_tool_registry_user,mcp.tool.registry.user,model_mcp_tool_registry,group_mcp_user,1,0,0,0
+access_mcp_tool_registry_admin,mcp.tool.registry.admin,model_mcp_tool_registry,group_mcp_admin,1,1,1,1
