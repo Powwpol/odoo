@@ -7,8 +7,10 @@ that Claude Code can interact with via the MCP protocol.
 Authentication: Bearer token (Odoo API keys)
 Protocol: JSON/2 style over HTTP
 """
+import base64
 import json
 import logging
+import mimetypes
 
 from odoo import http, fields
 from odoo.http import request, Response
@@ -445,6 +447,358 @@ class OdooMCPController(http.Controller):
                 'state': 'approved',
             }
         except (UserError, ValidationError) as e:
+            return {'error': str(e)}
+
+    # ----------------------------------------------------------------
+    # Receipt / Attachment Upload
+    # ----------------------------------------------------------------
+
+    @http.route(
+        '/mcp/expense/upload-receipt',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def upload_receipt(self, expense_id, filename, data, set_as_main=True):
+        """Upload a receipt file to an existing expense.
+
+        The file must be base64-encoded. Supports images (PNG, JPG, WEBP),
+        PDFs, and common document formats.
+
+        Args:
+            expense_id: Expense ID to attach the receipt to
+            filename: Original filename (e.g. 'receipt.pdf', 'photo.jpg')
+            data: Base64-encoded file content
+            set_as_main: Set as main attachment / primary receipt (default True)
+        """
+        try:
+            expense = request.env['hr.expense'].browse(expense_id)
+            if not expense.exists():
+                return {'error': f'Expense {expense_id} not found'}
+
+            # Decode and validate
+            try:
+                file_content = base64.b64decode(data)
+            except Exception:
+                return {'error': 'Invalid base64 data'}
+
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+            # Create the attachment
+            attachment = request.env['ir.attachment'].create({
+                'name': filename,
+                'datas': data,  # Odoo expects base64 in datas
+                'res_model': 'hr.expense',
+                'res_id': expense_id,
+                'mimetype': mimetype,
+            })
+
+            # Set as main receipt
+            if set_as_main:
+                expense._message_set_main_attachment_id(attachment, force=True)
+
+            return {
+                'success': True,
+                'attachment_id': attachment.id,
+                'filename': filename,
+                'mimetype': mimetype,
+                'size': len(file_content),
+                'expense_id': expense_id,
+                'expense_name': expense.name,
+                'nb_attachments': expense.nb_attachment,
+                'is_main': set_as_main,
+            }
+
+        except (AccessError, ValidationError, UserError) as e:
+            return {'error': str(e)}
+        except Exception as e:
+            _logger.exception("MCP upload-receipt error")
+            return {'error': str(e)}
+
+    @http.route(
+        '/mcp/expense/upload-receipts-batch',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def upload_receipts_batch(self, receipts):
+        """Upload multiple receipts and attach to expenses.
+
+        Args:
+            receipts: List of receipt objects, each with:
+                - expense_id: Expense ID
+                - filename: File name
+                - data: Base64-encoded content
+        """
+        results = []
+        for receipt in receipts:
+            result = self.upload_receipt(
+                expense_id=receipt['expense_id'],
+                filename=receipt['filename'],
+                data=receipt['data'],
+                set_as_main=receipt.get('set_as_main', True),
+            )
+            results.append(result)
+
+        success_count = sum(1 for r in results if r.get('success'))
+        return {
+            'total': len(receipts),
+            'success': success_count,
+            'failed': len(receipts) - success_count,
+            'results': results,
+        }
+
+    @http.route(
+        '/mcp/expense/create-from-receipt',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def create_expense_from_receipt(self, filename, data, **kwargs):
+        """Create a new expense directly from a receipt upload.
+
+        Uploads the file, creates the expense, and attaches the receipt
+        in one operation. Optionally pre-fills expense data.
+
+        Args:
+            filename: Receipt filename (e.g. 'restaurant_receipt.jpg')
+            data: Base64-encoded file content
+            **kwargs: Optional expense fields to pre-fill:
+                - name: Expense description
+                - price_unit: Amount (default 0, to be filled manually)
+                - date: Expense date (YYYY-MM-DD)
+                - product_id: Expense product/category ID
+                - expense_category_id: Custom category ID
+                - employee_id: Employee ID (defaults to current user's employee)
+                - project_id: Project ID
+                - client_name: Client name
+                - location: Location
+                - is_billable: Boolean
+                - description: Detailed description / notes
+        """
+        try:
+            # Decode and validate
+            try:
+                file_content = base64.b64decode(data)
+            except Exception:
+                return {'error': 'Invalid base64 data'}
+
+            mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+            # Create attachment first (unlinked, like Odoo's upload flow)
+            attachment = request.env['ir.attachment'].create({
+                'name': filename,
+                'datas': data,
+                'res_model': 'hr.expense',
+                'res_id': 0,  # temporary
+                'mimetype': mimetype,
+            })
+
+            # Build expense values
+            Expense = request.env['hr.expense']
+
+            # Find default product
+            product = None
+            if kwargs.get('product_id'):
+                product = request.env['product.product'].browse(kwargs['product_id'])
+            else:
+                product = request.env['product.product'].search(
+                    [('can_be_expensed', '=', True)], limit=1
+                )
+
+            if not product or not product.exists():
+                return {'error': 'No expensable product found. Create at least one expense product.'}
+
+            # Determine employee
+            employee_id = kwargs.get('employee_id')
+            if not employee_id:
+                employee = request.env['hr.employee'].search(
+                    [('user_id', '=', request.env.uid)], limit=1
+                )
+                employee_id = employee.id if employee else False
+
+            vals = {
+                'name': kwargs.get('name', filename),
+                'product_id': product.id,
+                'price_unit': kwargs.get('price_unit', 0),
+            }
+
+            if employee_id:
+                vals['employee_id'] = employee_id
+            if kwargs.get('date'):
+                vals['date'] = kwargs['date']
+            if kwargs.get('expense_category_id'):
+                vals['expense_category_id'] = kwargs['expense_category_id']
+            if kwargs.get('project_id'):
+                vals['project_id'] = kwargs['project_id']
+            if kwargs.get('client_name'):
+                vals['client_name'] = kwargs['client_name']
+            if kwargs.get('location'):
+                vals['location'] = kwargs['location']
+            if kwargs.get('is_billable'):
+                vals['is_billable'] = kwargs['is_billable']
+            if kwargs.get('description'):
+                vals['description'] = kwargs['description']
+
+            if product.property_account_expense_id:
+                vals['account_id'] = product.property_account_expense_id.id
+
+            # Create expense
+            expense = Expense.create(vals)
+
+            # Link attachment to expense
+            attachment.write({
+                'res_model': 'hr.expense',
+                'res_id': expense.id,
+            })
+            expense._message_set_main_attachment_id(attachment, force=True)
+
+            return {
+                'success': True,
+                'expense_id': expense.id,
+                'expense_name': expense.name,
+                'state': expense.state,
+                'amount': expense.price_unit,
+                'employee': expense.employee_id.name if expense.employee_id else None,
+                'attachment_id': attachment.id,
+                'filename': filename,
+                'nb_attachments': expense.nb_attachment,
+            }
+
+        except (AccessError, ValidationError, UserError) as e:
+            return {'error': str(e)}
+        except Exception as e:
+            _logger.exception("MCP create-from-receipt error")
+            return {'error': str(e)}
+
+    @http.route(
+        '/mcp/expense/create-from-receipts',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def create_expenses_from_receipts(self, receipts):
+        """Create multiple expenses from multiple receipt uploads.
+
+        Each receipt creates one expense. Useful for batch processing
+        a folder of receipt images.
+
+        Args:
+            receipts: List of receipt objects, each with:
+                - filename: File name
+                - data: Base64-encoded content
+                - name: Expense description (optional)
+                - price_unit: Amount (optional)
+                - date: Date (optional)
+                - expense_category_id: Category ID (optional)
+                - product_id: Product ID (optional)
+        """
+        results = []
+        expense_ids = []
+
+        for receipt in receipts:
+            filename = receipt.pop('filename')
+            data = receipt.pop('data')
+            result = self.create_expense_from_receipt(
+                filename=filename,
+                data=data,
+                **receipt,
+            )
+            results.append(result)
+            if result.get('expense_id'):
+                expense_ids.append(result['expense_id'])
+
+        success_count = sum(1 for r in results if r.get('success'))
+        return {
+            'total': len(receipts),
+            'success': success_count,
+            'failed': len(receipts) - success_count,
+            'expense_ids': expense_ids,
+            'results': results,
+        }
+
+    @http.route(
+        '/mcp/expense/receipts',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def list_expense_receipts(self, expense_id):
+        """List all receipt attachments for an expense.
+
+        Args:
+            expense_id: Expense ID
+        """
+        try:
+            expense = request.env['hr.expense'].browse(expense_id)
+            if not expense.exists():
+                return {'error': f'Expense {expense_id} not found'}
+
+            attachments = request.env['ir.attachment'].search([
+                ('res_model', '=', 'hr.expense'),
+                ('res_id', '=', expense_id),
+            ])
+
+            main_id = expense.message_main_attachment_id.id if expense.message_main_attachment_id else None
+
+            return {
+                'expense_id': expense_id,
+                'expense_name': expense.name,
+                'nb_attachments': len(attachments),
+                'main_attachment_id': main_id,
+                'attachments': [
+                    {
+                        'id': att.id,
+                        'name': att.name,
+                        'mimetype': att.mimetype,
+                        'file_size': att.file_size,
+                        'checksum': att.checksum,
+                        'create_date': str(att.create_date),
+                        'is_main': att.id == main_id,
+                    }
+                    for att in attachments
+                ],
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    @http.route(
+        '/mcp/expense/receipt-download',
+        type='json',
+        auth='bearer',
+        methods=['POST'],
+        csrf=False,
+        save_session=False,
+    )
+    def download_receipt(self, attachment_id):
+        """Download a receipt attachment as base64.
+
+        Args:
+            attachment_id: Attachment ID
+        """
+        try:
+            attachment = request.env['ir.attachment'].browse(attachment_id)
+            if not attachment.exists():
+                return {'error': f'Attachment {attachment_id} not found'}
+
+            return {
+                'id': attachment.id,
+                'name': attachment.name,
+                'mimetype': attachment.mimetype,
+                'file_size': attachment.file_size,
+                'data': attachment.datas.decode('utf-8') if attachment.datas else None,
+            }
+        except Exception as e:
             return {'error': str(e)}
 
     # ----------------------------------------------------------------

@@ -73,6 +73,12 @@ The MCP server is at `/home/user/odoo/custom-addons/odoo_mcp_server/`:
 - `/mcp/expense/summary` - Expense aggregation
 - `/mcp/expense/submit` - Submit expenses
 - `/mcp/expense/approve` - Approve expenses
+- `/mcp/expense/upload-receipt` - Upload receipt to existing expense (base64)
+- `/mcp/expense/upload-receipts-batch` - Upload multiple receipts to multiple expenses
+- `/mcp/expense/create-from-receipt` - Create expense + attach receipt in one call
+- `/mcp/expense/create-from-receipts` - Batch: create expenses from multiple receipts
+- `/mcp/expense/receipts` - List all receipt attachments for an expense
+- `/mcp/expense/receipt-download` - Download receipt as base64
 
 ### Authentication
 All endpoints use `auth='bearer'` with Odoo API keys.

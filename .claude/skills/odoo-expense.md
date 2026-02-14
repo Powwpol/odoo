@@ -10,13 +10,14 @@ Actions:
 - `add-policy` - Add a new expense policy rule
 - `add-field` - Add a custom field to expenses
 - `modify-workflow` - Modify the approval workflow
-- `report` - Generate expense report customization
+- `upload-receipt` - Upload a receipt to an expense
+- `create-from-receipt` - Create an expense from a receipt image
 
 ## Instructions
 
 ### Architecture Overview
 The expense customization is in `/home/user/odoo/custom-addons/hr_expense_custom/`:
-- `models/hr_expense.py` - Extends `hr.expense` with custom fields
+- `models/hr_expense.py` - Extends `hr.expense` with custom fields + receipt helpers
 - `models/expense_category.py` - Custom categories with limits & rules
 - `models/expense_policy.py` - Company-wide expense policies
 - `views/hr_expense_custom_views.xml` - View extensions
@@ -33,6 +34,8 @@ The expense customization is in `/home/user/odoo/custom-addons/hr_expense_custom
 - `policy_warning` - Computed policy violations
 - `exceeds_limit` - Boolean limit flag
 - `second_approval_required` / `second_approval_state` - Multi-level approval
+- `attach_receipt_base64(filename, data_b64)` - Attach receipt from base64
+- `create_with_receipt(vals, filename, data_b64)` - Create expense + attach receipt
 
 **hr.expense.category:**
 - `max_amount` - Per-expense limit
@@ -45,8 +48,58 @@ The expense customization is in `/home/user/odoo/custom-addons/hr_expense_custom
 - Policy types: limit, receipt, field, restrict
 - Per-amount conditions with category filtering
 
-### MCP Server Integration
-The MCP server at `/mcp/expense/*` provides:
+### MCP Receipt Endpoints
+
+**Upload receipt to existing expense:**
+```json
+POST /mcp/expense/upload-receipt
+{
+    "expense_id": 42,
+    "filename": "restaurant_receipt.jpg",
+    "data": "<base64-encoded-file-content>",
+    "set_as_main": true
+}
+```
+
+**Create expense from receipt (one step):**
+```json
+POST /mcp/expense/create-from-receipt
+{
+    "filename": "taxi_receipt.pdf",
+    "data": "<base64-encoded-file-content>",
+    "name": "Taxi to client meeting",
+    "price_unit": 35.50,
+    "date": "2025-10-15",
+    "expense_category_id": 2,
+    "location": "Paris",
+    "client_name": "Acme Corp"
+}
+```
+
+**Batch upload multiple receipts:**
+```json
+POST /mcp/expense/create-from-receipts
+{
+    "receipts": [
+        {"filename": "receipt1.jpg", "data": "...", "name": "Lunch", "price_unit": 25},
+        {"filename": "receipt2.pdf", "data": "...", "name": "Taxi", "price_unit": 40}
+    ]
+}
+```
+
+**List receipts for an expense:**
+```json
+POST /mcp/expense/receipts
+{"expense_id": 42}
+```
+
+**Download receipt as base64:**
+```json
+POST /mcp/expense/receipt-download
+{"attachment_id": 123}
+```
+
+### Other MCP Expense Endpoints
 - `/mcp/expense/summary` - Aggregated expense data
 - `/mcp/expense/submit` - Submit expenses
 - `/mcp/expense/approve` - Approve expenses

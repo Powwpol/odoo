@@ -7,7 +7,11 @@ Extends hr.expense with:
 - Receipt enforcement
 - Policy-based validation
 - Multi-level approval support
+- Receipt upload helpers for MCP
 """
+import base64
+import mimetypes
+
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 
@@ -269,3 +273,80 @@ class HrExpenseCustom(models.Model):
             if cat and cat.auto_approve_below and expense.total_amount < cat.auto_approve_below:
                 auto_approvable |= expense
         return auto_approvable
+
+    # ----------------------------------------------------------------
+    # Receipt Helpers (for MCP / API usage)
+    # ----------------------------------------------------------------
+
+    def attach_receipt_base64(self, filename, data_b64, set_as_main=True):
+        """Attach a receipt from base64 data.
+
+        Designed for API/MCP usage where files are transmitted as base64.
+
+        Args:
+            filename: Original filename (e.g. 'receipt.jpg')
+            data_b64: Base64-encoded file content
+            set_as_main: Set as the primary receipt (default True)
+
+        Returns:
+            ir.attachment record
+        """
+        self.ensure_one()
+        mimetype = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+        attachment = self.env['ir.attachment'].create({
+            'name': filename,
+            'datas': data_b64,
+            'res_model': 'hr.expense',
+            'res_id': self.id,
+            'mimetype': mimetype,
+        })
+
+        if set_as_main:
+            self._message_set_main_attachment_id(attachment, force=True)
+
+        return attachment
+
+    @api.model
+    def create_with_receipt(self, expense_vals, filename, data_b64):
+        """Create an expense with an attached receipt in one step.
+
+        Args:
+            expense_vals: Dictionary of expense field values
+            filename: Receipt filename
+            data_b64: Base64-encoded receipt content
+
+        Returns:
+            dict with expense_id, attachment_id, and summary info
+        """
+        # Ensure we have a product
+        if not expense_vals.get('product_id'):
+            product = self.env['product.product'].search(
+                [('can_be_expensed', '=', True)], limit=1
+            )
+            if product:
+                expense_vals['product_id'] = product.id
+
+        # Ensure we have an employee
+        if not expense_vals.get('employee_id'):
+            employee = self.env['hr.employee'].search(
+                [('user_id', '=', self.env.uid)], limit=1
+            )
+            if employee:
+                expense_vals['employee_id'] = employee.id
+
+        # Default name from filename if not provided
+        if not expense_vals.get('name'):
+            expense_vals['name'] = filename
+
+        expense = self.create(expense_vals)
+        attachment = expense.attach_receipt_base64(filename, data_b64)
+
+        return {
+            'expense_id': expense.id,
+            'expense_name': expense.name,
+            'attachment_id': attachment.id,
+            'state': expense.state,
+            'amount': expense.price_unit,
+            'employee': expense.employee_id.name if expense.employee_id else None,
+        }
