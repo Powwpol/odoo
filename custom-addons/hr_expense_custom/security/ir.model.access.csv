@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_expense_category_user,hr.expense.category.user,model_hr_expense_category,base.group_user,1,0,0,0
+access_expense_category_manager,hr.expense.category.manager,model_hr_expense_category,hr_expense.group_hr_expense_manager,1,1,1,1
+access_expense_policy_user,hr.expense.policy.user,model_hr_expense_policy,base.group_user,1,0,0,0
+access_expense_policy_manager,hr.expense.policy.manager,model_hr_expense_policy,hr_expense.group_hr_expense_manager,1,1,1,1
+access_expense_batch_approve_approver,hr.expense.batch.approve.approver,model_hr_expense_batch_approve,hr_expense.group_hr_expense_team_approver,1,1,1,0

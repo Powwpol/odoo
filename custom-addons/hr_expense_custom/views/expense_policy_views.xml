@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ============================================================ -->
+    <!-- Expense Policy Views                                         -->
+    <!-- ============================================================ -->
+    <record id="expense_policy_view_tree" model="ir.ui.view">
+        <field name="name">hr.expense.policy.tree</field>
+        <field name="model">hr.expense.policy</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="policy_type" widget="badge"/>
+                <field name="min_amount"/>
+                <field name="limit_amount"/>
+                <field name="limit_period"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="expense_policy_view_form" model="ir.ui.view">
+        <field name="name">hr.expense.policy.form</field>
+        <field name="model">hr.expense.policy</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Policy">
+                            <field name="policy_type"/>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Conditions">
+                            <field name="min_amount"/>
+                            <field name="max_amount"/>
+                            <field name="category_ids" widget="many2many_tags"/>
+                        </group>
+                    </group>
+                    <group string="Limit Rules"
+                        invisible="policy_type != 'limit'">
+                        <field name="limit_amount"/>
+                        <field name="limit_period"/>
+                    </group>
+                    <group string="Required Field"
+                        invisible="policy_type != 'field'">
+                        <field name="required_field"/>
+                    </group>
+                    <group string="Restriction"
+                        invisible="policy_type != 'restrict'">
+                        <field name="restriction_message"/>
+                    </group>
+                    <group string="Description">
+                        <field name="description" nolabel="1" colspan="2"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="expense_policy_action" model="ir.actions.act_window">
+        <field name="name">Expense Policies</field>
+        <field name="res_model">hr.expense.policy</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_expense_policy"
+        name="Policies"
+        parent="hr_expense.menu_hr_expense_configuration"
+        action="expense_policy_action"
+        sequence="20"/>
+</odoo>
